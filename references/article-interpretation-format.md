@@ -2,6 +2,12 @@
 
 Use this reference when producing Chinese deep-reading documents for scientific papers.
 
+## Navigation
+
+- Target Tone
+- Required Sections
+- Markdown Skeleton
+
 ## Target Tone
 
 Write as a rigorous but readable Chinese research-public-account article:

@@ -1,15 +1,2 @@
-__pycache__/
-*.py[cod]
-*.docx
-*.pdf
-*.png
-*.jpg
-*.jpeg
-*.tif
-*.tiff
-*.zip
-outputs/
-figures/
-paper_extracted_text.txt
-.DS_Store
-Thumbs.db
+python-docx>=1.1.2
+Pillow>=10.0.0

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -16,13 +18,20 @@ from pathlib import Path
 def asset_prefix_from_doi(doi: str) -> str:
     match = re.search(r"s(\d+)-(\d{3,4})-(\d+)-\d+", doi)
     if not match:
-        raise ValueError(f"Cannot infer Springer Nature asset prefix from DOI: {doi}")
+        raise ValueError(
+            "Cannot infer Springer Nature asset prefix from DOI. "
+            "This helper only supports Springer Nature article DOIs that contain "
+            f"a pattern like 's41467-024-53523-8'. DOI: {doi}"
+        )
     journal_code, year_token, article = match.groups()
     year = year_token if len(year_token) == 4 else f"20{year_token[-2:]}"
     return f"{journal_code}_{year}_{article}"
 
 
 def download_figures(doi: str, output_dir: Path, count: int) -> list[Path]:
+    if count < 1:
+        raise ValueError("--count must be at least 1")
+
     output_dir.mkdir(parents=True, exist_ok=True)
     doi_suffix = doi.split("/", 1)[1] if "/" in doi else doi
     encoded_doi = doi_suffix.replace("/", "%2F")
@@ -34,7 +43,14 @@ def download_figures(doi: str, output_dir: Path, count: int) -> list[Path]:
             f"art%3A10.1038%2F{encoded_doi}/MediaObjects/{prefix}_Fig{index}_HTML.png"
         )
         dest = output_dir / f"Fig{index}_HTML.png"
-        urllib.request.urlretrieve(url, dest)
+        try:
+            urllib.request.urlretrieve(url, dest)
+        except urllib.error.HTTPError as exc:
+            print(f"warning: figure {index} unavailable ({exc.code}) at {url}", file=sys.stderr)
+            continue
+        except urllib.error.URLError as exc:
+            print(f"warning: figure {index} download failed: {exc.reason}", file=sys.stderr)
+            continue
         saved.append(dest)
     return saved
 
@@ -45,7 +61,10 @@ def main() -> None:
     parser.add_argument("output_dir", type=Path)
     parser.add_argument("--count", type=int, default=8)
     args = parser.parse_args()
-    for path in download_figures(args.doi, args.output_dir, args.count):
+    saved = download_figures(args.doi, args.output_dir, args.count)
+    if not saved:
+        raise SystemExit("No figures were downloaded. Check the DOI, article publisher, or figure count.")
+    for path in saved:
         print(path)
 
 
